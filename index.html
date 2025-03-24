@@ -27,78 +27,185 @@
         h1 {
             position: relative;
             z-index: 1;
-            font-size: 3rem;
+            font-size: 2rem;
             text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
             display: none;
+            text-align: center;
         }
-        .gift-box {
+        h1 span {
+            display: block;
+        }
+        .rose-box {
             width: 100px;
             height: 100px;
-            background: red;
+            background: rgba(255, 182, 193, 0.7); /* Light pink background, similar to the hearts */
             position: relative;
             z-index: 2;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-        .gift-box::before {
-            content: '\1F381'; /* Gift emoji */
             font-size: 50px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+            border-radius: 10px; /* Rounded corners for the rose box */
+        }
+        .rose-box:hover {
+            transform: scale(1.1);
+        }
+        .rose-box::before {
+            content: '\1F339'; /* Rose emoji */
+            font-size: 50px;
+        }
+        audio {
+            display: none;
         }
     </style>
 </head>
 <body>
     <canvas id="animationCanvas"></canvas>
-    <div class="gift-box" onclick="openGift()"></div>
-    <h1 id="message">小陈老师 天天开心</h1>
+    <div class="rose-box" onclick="openGift()"></div>
+    <h1 id="message">
+        最美！小陈老师！<br>
+        <span>身体健康！长命百岁！</span>
+        <span>Happy every day！</span>
+    </h1>
+    <audio id="giftAudio" src="your-music-file.mp3" preload="auto"></audio> <!-- Add your music file path here -->
 
     <script>
         const canvas = document.getElementById("animationCanvas");
         const ctx = canvas.getContext("2d");
         const message = document.getElementById("message");
+        const giftAudio = document.getElementById("giftAudio");
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
         let particles = [];
-        class Butterfly {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = canvas.height;
-                this.size = Math.random() * 10 + 5;
-                this.speedX = Math.random() * 4 - 2;
-                this.speedY = Math.random() * -3 - 2;
+        let bubbles = [];
+        let fireworksFinished = false;
+
+        class Firework {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 5 + 5; // Smaller particles
+                this.speedX = Math.random() * 6 - 3; // Random speed for X direction
+                this.speedY = Math.random() * -6 - 3; // Random speed for Y direction (upward)
+                this.opacity = 1;
+                this.alpha = 0.05 + Math.random() * 0.2; // Slight transparency for the "sparkling" effect
+                this.color = `hsl(${Math.random() * 360}, 100%, 70%)`; // Random color for the firework sparks
+                this.life = 0; // Particle life counter
+                this.maxLife = Math.random() * 30 + 50; // Maximum life span of the particle
             }
             update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
+                this.x += this.speedX; // Move horizontally
+                this.y += this.speedY; // Move vertically
+                this.opacity -= 0.02; // Gradually fade the particle
+                this.size *= 0.98; // Slowly shrink the particle
+                this.life++; // Increase life counter
             }
             draw() {
-                ctx.fillStyle = "yellow";
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.opacity; // Set transparency
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.globalAlpha = 1; // Reset global alpha
+            }
+            isAlive() {
+                return this.life < this.maxLife; // Check if the particle is still alive
+            }
+        }
+
+        class Heart {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height;
+                this.size = Math.random() * 20 + 10;
+                this.speedX = Math.random() * 2 - 1; // Random horizontal speed
+                this.speedY = Math.random() * -3 - 1; // Random vertical speed
+                this.opacity = 0.5; // More transparent hearts
+            }
+
+            update() {
+                this.x += this.speedX; // Move heart horizontally
+                this.y += this.speedY; // Move heart vertically
+                if (this.x < 0 || this.x > canvas.width) { // Bounce horizontally off the walls
+                    this.speedX = -this.speedX;
+                }
+                if (this.y < 0 || this.y > canvas.height) { // Bounce vertically off the walls
+                    this.speedY = -this.speedY;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = "rgba(255, 105, 180, " + this.opacity + ")"; // Pink color with opacity
+                ctx.beginPath();
+                // Heart shape formula using bezier curves
+                ctx.moveTo(this.x, this.y);
+                ctx.bezierCurveTo(this.x - this.size / 2, this.y - this.size / 2,
+                                 this.x - this.size, this.y + this.size / 2,
+                                 this.x, this.y + this.size);
+                ctx.bezierCurveTo(this.x + this.size, this.y + this.size / 2,
+                                 this.x + this.size / 2, this.y - this.size / 2,
+                                 this.x, this.y);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            isAlive() {
+                return true; // Hearts never "die", they will continue moving forever
             }
         }
 
         function openGift() {
-            document.querySelector('.gift-box').style.display = 'none';
+            giftAudio.play(); // Play the music
+            document.querySelector('.rose-box').style.display = 'none';
             message.style.display = 'block';
-            for (let i = 0; i < 100; i++) {
-                particles.push(new Butterfly());
+            let boxX = window.innerWidth / 2;
+            let boxY = window.innerHeight; // Start from the bottom of the screen
+            for (let i = 0; i < 300; i++) { // Increased the number of fireworks to 50
+                let spreadX = Math.random() * 100 - 50;  // Random horizontal spread around the center
+                particles.push(new Firework(boxX + spreadX, boxY)); // Generate fireworks from gift box
             }
+
+            // Set a timeout to start hearts after fireworks finish
+            setTimeout(() => {
+                fireworksFinished = true;
+            }, 3000); // Wait for 3 seconds before starting hearts
+
+            // Speed up the heart generation
+            let intervalID = setInterval(() => {
+                if (fireworksFinished) {
+                    for (let i = 0; i < 10; i++) { // Generate 10 hearts every 100 milliseconds
+                        bubbles.push(new Heart());
+                    }
+                }
+            }, 100); // Faster creation interval (100ms)
+
+            setTimeout(() => {
+                clearInterval(intervalID);
+            }, 5000);
         }
 
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i = 0; i < particles.length; i++) {
-                particles[i].update();
-                particles[i].draw();
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+            if (!fireworksFinished) {
+                // Animate fireworks
+                particles = particles.filter(p => p.isAlive()); // Remove dead particles
+                for (let i = 0; i < particles.length; i++) {
+                    particles[i].update(); // Update the particle's position
+                    particles[i].draw();   // Draw the particle
+                }
+            } else {
+                // Animate hearts
+                for (let i = 0; i < bubbles.length; i++) {
+                    bubbles[i].update(); // Update heart position
+                    bubbles[i].draw();   // Draw heart
+                }
             }
-            requestAnimationFrame(animate);
+            requestAnimationFrame(animate); // Request the next animation frame
         }
 
         window.addEventListener("resize", function() {
